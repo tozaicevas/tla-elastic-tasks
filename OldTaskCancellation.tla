@@ -11,6 +11,7 @@ CONSTANTS NODES,                \* Nodes (represented as integers)
 VARIABLES bannedTasks, messages, subtasks
 \* bannedTasks stores ids
 
+
 ASSUME /\ Cardinality(NODES) > 0 
        /\ Cardinality(INITIAL_TASKS) > 0
        /\ NODES \subseteq Nat 
@@ -18,8 +19,7 @@ ASSUME /\ Cardinality(NODES) > 0
        /\ \A task \in INITIAL_TASKS: task.parentId = NULL
        /\ \A task \in INITIAL_TASKS: task.status = "ACCEPTED"
        /\ \A task \in INITIAL_TASKS: \E node \in NODES: node = task.nodeId
-
-       \* + assumption that task ids are unique
+       /\ \A taskA, taskB \in INITIAL_TASKS: (taskA /= taskB) => (taskA.id /= taskB.id)
 
 \* INITIAL_TASKS should all be "ACCEPTED"
 
@@ -56,8 +56,8 @@ Init == /\ bannedTasks = {}
         \* { 0, 1 }
         \* { {task0, task1}, {task0, task1} }
 
-CancelTask ==   /\ \/ \A message \in messages: message /= [type |-> "CANCEL", task |-> TASK_TO_CANCEL]
-                   \/ Cardinality(messages) = 0
+CancelTask ==   /\ \/ Cardinality(messages) = 0
+                    \/ \A message \in messages: message /= [type |-> "CANCEL", task |-> TASK_TO_CANCEL]
                 /\ bannedTasks' = bannedTasks \union {TASK_TO_CANCEL}
                 /\ messages' = messages \union {[type |-> "CANCEL", task |-> TASK_TO_CANCEL]}
                 /\ UNCHANGED <<subtasks>>
@@ -73,14 +73,20 @@ ChangeTaskStatus(task, newStatus) == [
     status |-> newStatus
 ]
 
-AcceptTask(node) == /\ \E subtask \in subtasks: 
+AcceptAnyTask(node) == /\ \E subtask \in subtasks: 
                             /\ subtask.parentId \notin bannedTasks 
                             /\ subtask.nodeId = node
                     /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
                     /\ UNCHANGED <<messages, bannedTasks>>
 
+UnbanTask(t) == /\ t.id \in bannedTasks 
+                   /\ bannedTasks' = bannedTasks \ {t.id}
+                   /\ messages' = messages \union {[type |-> "UNBAN", task |-> t]}
+                   /\ UNCHANGED <<subtasks>>
+
 Next == \/ CancelTask
-        \/ \E node \in NODES: AcceptTask(node)
+        \/ \E node \in NODES: AcceptAnyTask(node)
+        \/ \E task \in INITIAL_TASKS: UnbanTask(task)
         \* \/ 
 
 \* TypeOK == /\ small \in 0..3

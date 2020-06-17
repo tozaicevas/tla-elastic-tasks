@@ -27,3 +27,7 @@
 
 # Vim backup file
 *~
+
+# output
+states/*
+*.out

@@ -115,4 +115,4 @@ SubtasksNotAcceptedAfterBan == \A message \in messages:
                                         /\ subtask.status = "ACCEPTED"
                                         /\ isSubtaskAcceptedAfterBan[<<subtask.id, subtask.nodeId>>]
 
-=============================================================================
+==========================================================================================

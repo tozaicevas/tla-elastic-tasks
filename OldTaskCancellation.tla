@@ -52,7 +52,6 @@ Init == /\ bannedParentTaskIds = {}
         /\ messages = {} 
         /\ subtasks = UNION {GetInitialSubtasks(node): node \in NODE_IDS}
         /\ isSubtaskAcceptedAfterBan = [x \in {<<task.id, task.nodeId>>: task \in subtasks} |-> FALSE]
-        /\ PrintT(isSubtaskAcceptedAfterBan)
 
 \* cancels and bans a parent task
 CancelTask ==   /\ \/ Cardinality(messages) = 0

@@ -84,9 +84,9 @@ AcceptAnySubtask(node) ==   /\ \E subtask \in subtasks:
                             /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) 
                                 \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
                             /\ isSubtaskAcceptedAfterBan' = 
-                            [isSubtaskAcceptedAfterBan EXCEPT ![<<GetAnyNotBannedTask(node).id, node>>] 
-                                = \E message \in messages: 
-                                    message = [type |-> "BAN", parentTaskId |-> GetAnyNotBannedTask(node).parentId]]
+                                [isSubtaskAcceptedAfterBan EXCEPT ![<<GetAnyNotBannedTask(node).id, node>>] 
+                                    = \E message \in messages: 
+                                        message = [type |-> "BAN", parentTaskId |-> GetAnyNotBannedTask(node).parentId]]
                             /\ UNCHANGED <<messages, bannedParentTaskIds>>
 
 DismissSubtask(node) == /\ \E subtask \in subtasks:

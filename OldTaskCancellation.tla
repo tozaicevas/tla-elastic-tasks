@@ -6,10 +6,10 @@ CONSTANTS NODE_IDS,
           INITIAL_TASKS,
           NULL
 
-VARIABLES bannedTasks, messages, subtasks, hasSubtaskDecidedAfterBan
+VARIABLES bannedParentTaskIds, messages, subtasks, hasSubtaskDecidedAfterBan
 \* hasSubtaskDecidedAfterBan is a function from subtask to boolean, indicating whether task 
 \* subtask has Accepted/Dismissed request after it was banned at least once
-\* bannedTasks is a set currently banned of parent task ids
+\* bannedParentTaskIds is a set currently banned of parent task ids
 \* subtasks is a set of all subtasks
 
 ASSUME /\ Cardinality(NODE_IDS) > 0 
@@ -31,14 +31,13 @@ Task == [
     status: {"IN_FLIGHT", "DISMISSED", "ACCEPTED"}
 ]
 
-\* rename to parentTaskId
 Message == [
     type: {"BAN", "UNBAN", "CREATE"},
     parentTaskId: Nat
 ]
 
 TypeOK == /\ messages \subseteq Message
-          /\ \A bannedTask \in bannedTasks: \E parentTask \in INITIAL_TASKS: bannedTask = parentTask.id 
+          /\ \A bannedTask \in bannedParentTaskIds: \E parentTask \in INITIAL_TASKS: bannedTask = parentTask.id 
           /\ subtasks \subseteq (Task \ INITIAL_TASKS)
           /\ hasSubtaskDecidedAfterBan \in [{<<task.id, task.nodeId>>: task \in subtasks} -> {FALSE, TRUE}]
 
@@ -49,7 +48,7 @@ GetInitialSubtasks(node) == {[
     status |-> "IN_FLIGHT"
 ]: initialTask \in INITIAL_TASKS} 
 
-Init == /\ bannedTasks = {} 
+Init == /\ bannedParentTaskIds = {} 
         /\ messages = {} 
         /\ subtasks = UNION {GetInitialSubtasks(node): node \in NODE_IDS}
         /\ hasSubtaskDecidedAfterBan = [x \in {<<task.id, task.nodeId>>: task \in subtasks} |-> FALSE]
@@ -58,17 +57,17 @@ Init == /\ bannedTasks = {}
 \* cancels + bans the task
 CancelTask ==   /\ \/ Cardinality(messages) = 0
                     \/ \A message \in messages: message /= [type |-> "BAN", parentTaskId |-> PARENT_TASK_TO_CANCEL_ID]
-                /\ bannedTasks' = bannedTasks \union {PARENT_TASK_TO_CANCEL_ID}
+                /\ bannedParentTaskIds' = bannedParentTaskIds \union {PARENT_TASK_TO_CANCEL_ID}
                 /\ messages' = messages \union {[type |-> "BAN", parentTaskId |-> PARENT_TASK_TO_CANCEL_ID]}
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 
 GetAnyNotBannedTask(node) == (CHOOSE subtask \in subtasks:
-                            /\ subtask.parentId \notin bannedTasks 
+                            /\ subtask.parentId \notin bannedParentTaskIds 
                             /\ subtask.nodeId = node
                             /\ subtask.status = "IN_FLIGHT")
 
 GetAnyBannedTask(node) == (CHOOSE subtask \in subtasks:
-                            /\ subtask.parentId \in bannedTasks 
+                            /\ subtask.parentId \in bannedParentTaskIds 
                             /\ subtask.nodeId = node
                             /\ subtask.status = "IN_FLIGHT")
 
@@ -81,7 +80,7 @@ ChangeTaskStatus(task, newStatus) == [
 
 \* rename to AcceptAnySubtask
 AcceptAnyTask(node) ==  /\ \E subtask \in subtasks: 
-                            /\ subtask.parentId \notin bannedTasks 
+                            /\ subtask.parentId \notin bannedParentTaskIds 
                             /\ subtask.nodeId = node
                             /\ subtask.status = "IN_FLIGHT"
                         /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) 
@@ -90,18 +89,18 @@ AcceptAnyTask(node) ==  /\ \E subtask \in subtasks:
                             [hasSubtaskDecidedAfterBan EXCEPT ![<<GetAnyNotBannedTask(node).id, node>>] 
                                 = \E message \in messages: 
                                     message = [type |-> "BAN", parentTaskId |-> GetAnyNotBannedTask(node).parentId]]
-                        /\ UNCHANGED <<messages, bannedTasks>>
+                        /\ UNCHANGED <<messages, bannedParentTaskIds>>
 
 DismissSubtask(node) == /\ \E subtask \in subtasks:
-                            /\ subtask.parentId \in bannedTasks
+                            /\ subtask.parentId \in bannedParentTaskIds
                             /\ subtask.nodeId = node
                             /\ subtask.status = "IN_FLIGHT"
                         /\ subtasks' = (subtasks \ {GetAnyBannedTask(node)}) 
                             \union {ChangeTaskStatus(GetAnyBannedTask(node), "DISMISSED")}
-                        /\ UNCHANGED <<messages, bannedTasks, hasSubtaskDecidedAfterBan>>
+                        /\ UNCHANGED <<messages, bannedParentTaskIds, hasSubtaskDecidedAfterBan>>
 
-UnbanTask(t) == /\ t.id \in bannedTasks 
-                /\ bannedTasks' = bannedTasks \ {t.id}
+UnbanTask(t) == /\ t.id \in bannedParentTaskIds 
+                /\ bannedParentTaskIds' = bannedParentTaskIds \ {t.id}
                 /\ messages' = messages \union {[type |-> "UNBAN", parentTaskId |-> t.id]}
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 

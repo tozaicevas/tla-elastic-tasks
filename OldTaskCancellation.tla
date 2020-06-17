@@ -1,8 +1,8 @@
 ------------------------------- MODULE OldTaskCancellation -------------------------------
 EXTENDS TLC, Integers, FiniteSets, Naturals, Constants
 
-CONSTANTS NODE_IDS,                \* Nodes (represented as integers)
-          TASK_TO_CANCEL,       \* Task that needs to be cancelled
+CONSTANTS NODE_IDS,                
+          PARENT_TASK_TO_CANCEL_ID,       
           INITIAL_TASKS,
           NULL
 
@@ -15,7 +15,7 @@ VARIABLES bannedTasks, messages, subtasks, hasSubtaskDecidedAfterBan
 ASSUME /\ Cardinality(NODE_IDS) > 0 
        /\ Cardinality(INITIAL_TASKS) > 0
        /\ NODE_IDS \subseteq Nat 
-       /\ \E task \in INITIAL_TASKS: task.id = TASK_TO_CANCEL 
+       /\ \E task \in INITIAL_TASKS: task.id = PARENT_TASK_TO_CANCEL_ID 
        /\ \A task \in INITIAL_TASKS: task.parentId = NULL
        /\ \A task \in INITIAL_TASKS: task.status = "ACCEPTED"
        /\ \A task \in INITIAL_TASKS: \E node \in NODE_IDS: node = task.nodeId
@@ -57,9 +57,9 @@ Init == /\ bannedTasks = {}
 
 \* cancels + bans the task
 CancelTask ==   /\ \/ Cardinality(messages) = 0
-                    \/ \A message \in messages: message /= [type |-> "BAN", parentTaskId |-> TASK_TO_CANCEL]
-                /\ bannedTasks' = bannedTasks \union {TASK_TO_CANCEL}
-                /\ messages' = messages \union {[type |-> "BAN", parentTaskId |-> TASK_TO_CANCEL]}
+                    \/ \A message \in messages: message /= [type |-> "BAN", parentTaskId |-> PARENT_TASK_TO_CANCEL_ID]
+                /\ bannedTasks' = bannedTasks \union {PARENT_TASK_TO_CANCEL_ID}
+                /\ messages' = messages \union {[type |-> "BAN", parentTaskId |-> PARENT_TASK_TO_CANCEL_ID]}
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 
 GetAnyNotBannedTask(node) == (CHOOSE subtask \in subtasks:

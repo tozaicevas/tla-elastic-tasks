@@ -5,7 +5,7 @@ _NODE_IDS == {0, 1}
 
 _NULL == 9999
 
-_TASK_TO_CANCEL == 0
+_PARENT_TASK_TO_CANCEL_ID == 0
 
 _INITIAL_TASKS == {
     [

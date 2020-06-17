@@ -10,6 +10,8 @@ CONSTANTS NODES,                \* Nodes (represented as integers)
 
 VARIABLES bannedTasks, messages, subtasks
 \* bannedTasks stores ids
+\* subtasks stores full task structures
+\* 
 
 
 ASSUME /\ Cardinality(NODES) > 0 
@@ -29,17 +31,18 @@ ASSUME /\ Cardinality(NODES) > 0
 Task == [
     id: Nat,
     nodeId: NODES,
-    parentId: INITIAL_TASKS \union {NULL},
+    parentId: {parentTask.id: parentTask \in INITIAL_TASKS} \union {NULL},
     status: {"IN_FLIGHT", "DISMISSED", "ACCEPTED"}
 ]
 
+\* rename to parentTaskId
 Message == [
     type: {"BAN", "UNBAN", "CREATE", "CANCEL"},
-    task: Task
+    task: Nat
 ]
 
 TypeOK == /\ messages \subseteq Message
-          /\ bannedTasks \subseteq INITIAL_TASKS
+          /\ \A bannedTask \in bannedTasks: \E parentTask \in INITIAL_TASKS: bannedTask = parentTask.id 
           /\ subtasks \subseteq (Task \ INITIAL_TASKS)
 
 GetInitialSubtasks(node) == {[
@@ -56,6 +59,7 @@ Init == /\ bannedTasks = {}
         \* { 0, 1 }
         \* { {task0, task1}, {task0, task1} }
 
+\* cancels + bans the task
 CancelTask ==   /\ \/ Cardinality(messages) = 0
                     \/ \A message \in messages: message /= [type |-> "CANCEL", task |-> TASK_TO_CANCEL]
                 /\ bannedTasks' = bannedTasks \union {TASK_TO_CANCEL}
@@ -63,8 +67,14 @@ CancelTask ==   /\ \/ Cardinality(messages) = 0
                 /\ UNCHANGED <<subtasks>>
 
 GetAnyNotBannedTask(node) == (CHOOSE subtask \in subtasks:
-                            /\ subtask \notin bannedTasks 
-                            /\ subtask.nodeId = node)
+                            /\ subtask.parentId \notin bannedTasks 
+                            /\ subtask.nodeId = node
+                            /\ subtask.status = "IN_FLIGHT")
+
+GetAnyBannedTask(node) == (CHOOSE subtask \in subtasks:
+                            /\ subtask.parentId \in bannedTasks 
+                            /\ subtask.nodeId = node
+                            /\ subtask.status = "IN_FLIGHT")
 
 ChangeTaskStatus(task, newStatus) == [
     id |-> task.id,
@@ -73,40 +83,33 @@ ChangeTaskStatus(task, newStatus) == [
     status |-> newStatus
 ]
 
+\* rename to AcceptAnySubtask
 AcceptAnyTask(node) == /\ \E subtask \in subtasks: 
                             /\ subtask.parentId \notin bannedTasks 
                             /\ subtask.nodeId = node
-                    /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
+                            /\ subtask.status = "IN_FLIGHT"
+                    /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) 
+                        \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
                     /\ UNCHANGED <<messages, bannedTasks>>
 
+DismissSubtask(node) == /\ \E subtask \in subtasks:
+                            /\ subtask.parentId \in bannedTasks
+                            /\ subtask.nodeId = node
+                            /\ subtask.status = "IN_FLIGHT"
+                        /\ subtasks' = (subtasks \ {GetAnyBannedTask(node)}) 
+                            \union {ChangeTaskStatus(GetAnyBannedTask(node), "DISMISSED")}
+                        /\ UNCHANGED <<messages, bannedTasks>>
+
 UnbanTask(t) == /\ t.id \in bannedTasks 
-                   /\ bannedTasks' = bannedTasks \ {t.id}
-                   /\ messages' = messages \union {[type |-> "UNBAN", task |-> t]}
-                   /\ UNCHANGED <<subtasks>>
+                /\ bannedTasks' = bannedTasks \ {t.id}
+                /\ messages' = messages \union {[type |-> "UNBAN", task |-> t.id]}
+                /\ UNCHANGED <<subtasks>>
+
 
 Next == \/ CancelTask
-        \/ \E node \in NODES: AcceptAnyTask(node)
+        \/ \E node \in NODES: 
+            \/ AcceptAnyTask(node)
+            \/ DismissSubtask(node)
         \/ \E task \in INITIAL_TASKS: UnbanTask(task)
-        \* \/ 
-
-\* TypeOK == /\ small \in 0..3
-\*           /\ big \in 0..5
-
-\* Min(m,n) == IF m < n THEN m ELSE n
-
-\* Init == (small = 0) /\ (big = 0)
-
-\* SmallToBig == (small' = small - Min(small, 5 - big)) /\ (big' = big + Min(small, 5 - big))
-\* BigToSmall == (big' = big - Min(big, 3 - small)) /\ (small' = small + Min(big, 3 - small))
-
-\* FillSmall == (big' = big) /\ (small' = 3)
-\* FillBig == (small' = small) /\ (big' = 5)
-
-\* EmptySmall == (small' = 0) /\ (big' = big)
-\* EmptyBig == (big' = 0) /\ (small' = small)
-
-\* Next == FillSmall \/ FillBig \/ SmallToBig \/ BigToSmall \/ EmptySmall \/ EmptyBig
-
-\* NotSolved == big /= 4
 
 =============================================================================

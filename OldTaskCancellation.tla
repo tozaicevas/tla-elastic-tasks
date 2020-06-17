@@ -6,10 +6,10 @@ CONSTANTS NODE_IDS,
           INITIAL_TASKS,
           NULL
 
-\* subtask has Accepted/Dismissed request after it was banned at least once
 \* bannedParentTaskIds is a set of currently banned parent task ids
 \* subtasks is a set of all subtasks
-\* isSubtaskAcceptedAfterBan is a function from subtask to boolean, indicating whether task 
+\* isSubtaskAcceptedAfterBan is a function from subtask to boolean, indicating whether a subtask
+\* has Accepted/Dismissed request after it was banned at least once
 VARIABLES bannedParentTaskIds, messages, subtasks, isSubtaskAcceptedAfterBan
 
 ASSUME /\ Cardinality(NODE_IDS) > 0 

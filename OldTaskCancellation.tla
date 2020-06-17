@@ -34,17 +34,13 @@ Task == [
 \* rename to parentTaskId
 Message == [
     type: {"BAN", "UNBAN", "CREATE"},
-    taskId: Nat
+    parentTaskId: Nat
 ]
 
 TypeOK == /\ messages \subseteq Message
           /\ \A bannedTask \in bannedTasks: \E parentTask \in INITIAL_TASKS: bannedTask = parentTask.id 
           /\ subtasks \subseteq (Task \ INITIAL_TASKS)
           /\ hasSubtaskDecidedAfterBan \in [{<<task.id, task.nodeId>>: task \in subtasks} -> {FALSE, TRUE}]
-
-\*             rmState \in [RM -> {"working", "prepared", "committed", "aborted"}]
-
-\* TCInit == rmState = [rm \in RM |-> "working"]
 
 GetInitialSubtasks(node) == {[
     id |-> 0, 
@@ -61,9 +57,9 @@ Init == /\ bannedTasks = {}
 
 \* cancels + bans the task
 CancelTask ==   /\ \/ Cardinality(messages) = 0
-                    \/ \A message \in messages: message /= [type |-> "BAN", taskId |-> TASK_TO_CANCEL]
+                    \/ \A message \in messages: message /= [type |-> "BAN", parentTaskId |-> TASK_TO_CANCEL]
                 /\ bannedTasks' = bannedTasks \union {TASK_TO_CANCEL}
-                /\ messages' = messages \union {[type |-> "BAN", taskId |-> TASK_TO_CANCEL]}
+                /\ messages' = messages \union {[type |-> "BAN", parentTaskId |-> TASK_TO_CANCEL]}
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 
 GetAnyNotBannedTask(node) == (CHOOSE subtask \in subtasks:
@@ -93,7 +89,7 @@ AcceptAnyTask(node) ==  /\ \E subtask \in subtasks:
                         /\ hasSubtaskDecidedAfterBan' = 
                             [hasSubtaskDecidedAfterBan EXCEPT ![<<GetAnyNotBannedTask(node).id, node>>] 
                                 = \E message \in messages: 
-                                    message = [type |-> "BAN", taskId |-> GetAnyNotBannedTask(node).parentId]]
+                                    message = [type |-> "BAN", parentTaskId |-> GetAnyNotBannedTask(node).parentId]]
                         /\ UNCHANGED <<messages, bannedTasks>>
 
 DismissSubtask(node) == /\ \E subtask \in subtasks:
@@ -106,7 +102,7 @@ DismissSubtask(node) == /\ \E subtask \in subtasks:
 
 UnbanTask(t) == /\ t.id \in bannedTasks 
                 /\ bannedTasks' = bannedTasks \ {t.id}
-                /\ messages' = messages \union {[type |-> "UNBAN", taskId |-> t.id]}
+                /\ messages' = messages \union {[type |-> "UNBAN", parentTaskId |-> t.id]}
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 
 Next == \/ CancelTask
@@ -117,7 +113,7 @@ Next == \/ CancelTask
 
 SubtasksNotAcceptedAfterBan == \A message \in messages:
                                     message.type = "BAN" => ~\E subtask \in subtasks:
-                                        /\ subtask.parentId = message.taskId 
+                                        /\ subtask.parentId = message.parentTaskId 
                                         /\ subtask.status = "ACCEPTED"
                                         /\ hasSubtaskDecidedAfterBan[<<subtask.id, subtask.nodeId>>]
 

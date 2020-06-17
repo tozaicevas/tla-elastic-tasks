@@ -77,17 +77,17 @@ ChangeTaskStatus(task, newStatus) == [
     status |-> newStatus
 ]
 
-AcceptAnySubtask(node) ==  /\ \E subtask \in subtasks: 
-                            /\ subtask.parentId \notin bannedParentTaskIds 
-                            /\ subtask.nodeId = node
-                            /\ subtask.status = "IN_FLIGHT"
-                        /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) 
-                            \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
-                        /\ isSubtaskAcceptedAfterBan' = 
+AcceptAnySubtask(node) ==   /\ \E subtask \in subtasks: 
+                                /\ subtask.parentId \notin bannedParentTaskIds 
+                                /\ subtask.nodeId = node
+                                /\ subtask.status = "IN_FLIGHT"
+                            /\ subtasks' = (subtasks \ {GetAnyNotBannedTask(node)}) 
+                                \union {ChangeTaskStatus(GetAnyNotBannedTask(node), "ACCEPTED")}
+                            /\ isSubtaskAcceptedAfterBan' = 
                             [isSubtaskAcceptedAfterBan EXCEPT ![<<GetAnyNotBannedTask(node).id, node>>] 
                                 = \E message \in messages: 
                                     message = [type |-> "BAN", parentTaskId |-> GetAnyNotBannedTask(node).parentId]]
-                        /\ UNCHANGED <<messages, bannedParentTaskIds>>
+                            /\ UNCHANGED <<messages, bannedParentTaskIds>>
 
 DismissSubtask(node) == /\ \E subtask \in subtasks:
                             /\ subtask.parentId \in bannedParentTaskIds

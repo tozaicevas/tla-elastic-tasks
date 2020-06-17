@@ -1,7 +1,7 @@
 ------------------------------- MODULE OldTaskCancellation -------------------------------
 EXTENDS TLC, Integers, FiniteSets, Naturals, Constants
 
-CONSTANTS NODES,                \* Nodes (represented as integers)
+CONSTANTS NODE_IDS,                \* Nodes (represented as integers)
           TASK_TO_CANCEL,       \* Task that needs to be cancelled
           INITIAL_TASKS,
           NULL
@@ -12,13 +12,13 @@ VARIABLES bannedTasks, messages, subtasks, hasSubtaskDecidedAfterBan
 \* bannedTasks is a set currently banned of parent task ids
 \* subtasks is a set of all subtasks
 
-ASSUME /\ Cardinality(NODES) > 0 
+ASSUME /\ Cardinality(NODE_IDS) > 0 
        /\ Cardinality(INITIAL_TASKS) > 0
-       /\ NODES \subseteq Nat 
+       /\ NODE_IDS \subseteq Nat 
        /\ \E task \in INITIAL_TASKS: task.id = TASK_TO_CANCEL 
        /\ \A task \in INITIAL_TASKS: task.parentId = NULL
        /\ \A task \in INITIAL_TASKS: task.status = "ACCEPTED"
-       /\ \A task \in INITIAL_TASKS: \E node \in NODES: node = task.nodeId
+       /\ \A task \in INITIAL_TASKS: \E node \in NODE_IDS: node = task.nodeId
        /\ \A taskA, taskB \in INITIAL_TASKS: (taskA /= taskB) => (taskA.id /= taskB.id)
 
 \* IN_FLIGHT means the create task request is not yet received
@@ -26,7 +26,7 @@ ASSUME /\ Cardinality(NODES) > 0
 \* ACCEPTED means the create task request is received and subtask is created
 Task == [
     id: Nat,
-    nodeId: NODES,
+    nodeId: NODE_IDS,
     parentId: {parentTask.id: parentTask \in INITIAL_TASKS} \union {NULL},
     status: {"IN_FLIGHT", "DISMISSED", "ACCEPTED"}
 ]
@@ -51,7 +51,7 @@ GetInitialSubtasks(node) == {[
 
 Init == /\ bannedTasks = {} 
         /\ messages = {} 
-        /\ subtasks = UNION {GetInitialSubtasks(node): node \in NODES}
+        /\ subtasks = UNION {GetInitialSubtasks(node): node \in NODE_IDS}
         /\ hasSubtaskDecidedAfterBan = [x \in {<<task.id, task.nodeId>>: task \in subtasks} |-> FALSE]
         /\ PrintT(hasSubtaskDecidedAfterBan)
 
@@ -106,7 +106,7 @@ UnbanTask(t) == /\ t.id \in bannedTasks
                 /\ UNCHANGED <<subtasks, hasSubtaskDecidedAfterBan>>
 
 Next == \/ CancelTask
-        \/ \E node \in NODES: 
+        \/ \E node \in NODE_IDS: 
             \/ AcceptAnyTask(node)
             \/ DismissSubtask(node)
         \/ \E task \in INITIAL_TASKS: UnbanTask(task)

@@ -1,7 +1,7 @@
 ------------------------------- MODULE Constants -------------------------------
 EXTENDS TLC, Naturals
 
-_NODES == {0, 1}
+_NODE_IDS == {0, 1}
 
 _NULL == 9999
 

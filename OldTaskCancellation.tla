@@ -3,7 +3,8 @@ EXTENDS TLC, Integers, FiniteSets, Naturals, Constants
 
 CONSTANTS NODES,                \* Nodes (represented as integers)
           TASK_TO_CANCEL,       \* Task that needs to be cancelled
-          INITIAL_TASKS
+          INITIAL_TASKS,
+          NULL
         \*   NULL                  \* Needed to represent tasks without parent
         \*   TASKS,                \* Tasks without parents, that are running on Init
         \*   SEARCH_REQUESTS_COUNT,\* Maximum amount of tasks that can be run

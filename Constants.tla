@@ -1,13 +1,17 @@
 ------------------------------- MODULE Constants -------------------------------
-EXTENDS TLC
+EXTENDS TLC, Naturals
 
-CONSTANTS NULL
+_NODES == {0, 1}
 
-TASKS == {
+_NULL == 9999
+
+_TASK_TO_CANCEL == 0
+
+_INITIAL_TASKS == {
     [
             id |-> 0,
             nodeId |-> 0,
-            parentId |-> NULL,
+            parentId |-> _NULL,
             status |-> "ACCEPTED"
     ]
 }

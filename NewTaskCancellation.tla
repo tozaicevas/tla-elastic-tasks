@@ -12,7 +12,7 @@ CONSTANTS NODE_IDS,
 \* has Accepted/Dismissed request after it was banned at least once
 VARIABLES bannedParentTaskIds, messages, subtasks, isSubtaskAcceptedAfterBan
 
-ASSUME /\ Cardinality(NODE_IDS) > 0 
+ASSUME /\ Cardinality(NODE_IDS) > 1 
        /\ Cardinality(INITIAL_TASKS) > 0
        /\ NODE_IDS \subseteq Nat 
        /\ \E task \in INITIAL_TASKS: task.id = PARENT_TASK_TO_CANCEL_ID 

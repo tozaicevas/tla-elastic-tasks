@@ -3,13 +3,11 @@ EXTENDS TLC, Integers, FiniteSets, Naturals, Constants
 
 CONSTANTS NODE_IDS,                
           PARENT_TASK_TO_CANCEL_ID,       
-          INITIAL_TASKS,
+          INITIAL_TASKS,            
           NULL
 
-\* bannedParentTaskIds is a set of currently banned parent task ids
-\* subtasks is a set of all subtasks
 \* isSubtaskAcceptedAfterBan is a function from subtask to boolean, indicating whether a subtask
-\* has Accepted/Dismissed request after it was banned at least once
+\* has Accepted/Dismissed request after it was banned at least once. Relevant only for invariants
 VARIABLES bannedParentTaskIds, messages, subtasks, isSubtaskAcceptedAfterBan
 
 ASSUME /\ Cardinality(NODE_IDS) > 1 
@@ -21,9 +19,9 @@ ASSUME /\ Cardinality(NODE_IDS) > 1
        /\ \A task \in INITIAL_TASKS: \E node \in NODE_IDS: node = task.nodeId
        /\ \A taskA, taskB \in INITIAL_TASKS: (taskA /= taskB) => (taskA.id /= taskB.id)
 
-\* IN_FLIGHT means the create task request is not yet received
-\* DISMISSED means the create task request is received, but subtask was not created
-\* ACCEPTED means the create task request is received and subtask was created
+\* IN_FLIGHT means a create task request is not yet received
+\* DISMISSED means a create task request is received, but the subtask was not created
+\* ACCEPTED means a create task request is received and the subtask was created
 Task == [
     id: Nat,
     nodeId: NODE_IDS,
@@ -76,17 +74,17 @@ ChangeTaskStatus(task, newStatus) == [
     status |-> newStatus
 ]
 
-AcceptSubtask(node) ==   /\ \E subtask \in subtasks: 
+AcceptSubtask(node) ==  /\ \E subtask \in subtasks: 
                                 /\ subtask.parentId \notin bannedParentTaskIds 
                                 /\ subtask.nodeId = node
                                 /\ subtask.status = "IN_FLIGHT"
-                            /\ subtasks' = (subtasks \ {GetNotBannedParentTask(node)}) 
-                                \union {ChangeTaskStatus(GetNotBannedParentTask(node), "ACCEPTED")}
-                            /\ isSubtaskAcceptedAfterBan' = 
-                                [isSubtaskAcceptedAfterBan EXCEPT ![<<GetNotBannedParentTask(node).id, node>>] 
-                                    = \E message \in messages: 
-                                        message = [type |-> "BAN", parentTaskId |-> GetNotBannedParentTask(node).parentId]]
-                            /\ UNCHANGED <<messages, bannedParentTaskIds>>
+                        /\ subtasks' = (subtasks \ {GetNotBannedParentTask(node)}) 
+                            \union {ChangeTaskStatus(GetNotBannedParentTask(node), "ACCEPTED")}
+                        /\ isSubtaskAcceptedAfterBan' = 
+                            [isSubtaskAcceptedAfterBan EXCEPT ![<<GetNotBannedParentTask(node).id, node>>] 
+                                = \E message \in messages: 
+                                    message = [type |-> "BAN", parentTaskId |-> GetNotBannedParentTask(node).parentId]]
+                        /\ UNCHANGED <<messages, bannedParentTaskIds>>
 
 DismissSubtask(node) == /\ \E subtask \in subtasks:
                             /\ subtask.parentId \in bannedParentTaskIds
@@ -97,10 +95,10 @@ DismissSubtask(node) == /\ \E subtask \in subtasks:
                         /\ UNCHANGED <<messages, bannedParentTaskIds, isSubtaskAcceptedAfterBan>>
 
 UnbanParentTask(t) == /\ t.id \in bannedParentTaskIds 
-                /\ \A subtask \in subtasks: subtask.status /= "IN_FLIGHT"
-                /\ bannedParentTaskIds' = bannedParentTaskIds \ {t.id}
-                /\ messages' = messages \union {[type |-> "UNBAN", parentTaskId |-> t.id]}
-                /\ UNCHANGED <<subtasks, isSubtaskAcceptedAfterBan>>
+                      /\ \A subtask \in subtasks: subtask.status /= "IN_FLIGHT"
+                      /\ bannedParentTaskIds' = bannedParentTaskIds \ {t.id}
+                      /\ messages' = messages \union {[type |-> "UNBAN", parentTaskId |-> t.id]}
+                      /\ UNCHANGED <<subtasks, isSubtaskAcceptedAfterBan>>
 
 Next == \/ CancelParentTask
         \/ \E node \in NODE_IDS: 

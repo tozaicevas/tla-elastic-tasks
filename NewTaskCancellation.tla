@@ -44,7 +44,7 @@ GetInitialSubtasks(node) == {[
     nodeId |-> node,
     parentId |-> initialTask.id,
     status |-> "IN_FLIGHT"
-]: initialTask \in INITIAL_TASKS} 
+]: initialTask \in INITIAL_TASKS}
 
 Init == /\ bannedParentTaskIds = {} 
         /\ messages = {} 
@@ -95,7 +95,7 @@ DismissSubtask(node) == /\ \E subtask \in subtasks:
                         /\ UNCHANGED <<messages, bannedParentTaskIds, isSubtaskAcceptedAfterBan>>
 
 UnbanParentTask(t) == /\ t.id \in bannedParentTaskIds 
-                      /\ \A subtask \in subtasks: subtask.status /= "IN_FLIGHT"
+                      /\ \A subtask \in subtasks: (subtask.parentId = t.id) => subtask.status /= "IN_FLIGHT"
                       /\ bannedParentTaskIds' = bannedParentTaskIds \ {t.id}
                       /\ messages' = messages \union {[type |-> "UNBAN", parentTaskId |-> t.id]}
                       /\ UNCHANGED <<subtasks, isSubtaskAcceptedAfterBan>>
